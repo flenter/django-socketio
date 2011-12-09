@@ -45,12 +45,13 @@ def socketio(request):
     CLIENTS[socket.session.session_id] = (request, socket, context)
     try:
         #if socket.on_connect():
-        #    events.on_connect.send(request, socket, context)
+        events.on_connect.send(request, socket, context)
         while True:
             message = socket.receive()
             if message and type(message) == dict:
                 if MESSAGE_LOG_FORMAT is not None:
                     socket.handler.server.log.write(format_log(request, message))
+                    pass
 
 #                if message[0] == "__subscribe__" and len(message) == 2:
 #                    socket.subscribe(message[1])
@@ -58,10 +59,29 @@ def socketio(request):
 #                elif message[0] == "__unsubscribe__" and len(message) == 2:
 #                    events.on_unsubscribe.send(request, socket, context, message[1])
 #                    socket.unsubscribe(message[1])
+
                 if message['type'] == 'message':
-                    events.on_message.send(request, socket, context, message)
+                    if message['data'][:4] == "JCMD":
+
+                        from django.utils import simplejson
+
+                        data = simplejson.loads(message['data'][4:])
+
+                        if data.get("path", None) and data.get("params", None):
+                            path = data.get("path")
+                            if path == "__subscribe__":
+                                socket.subscribe(data["params"]["path"])
+                                events.on_subscribe.send(request, socket, context, data["params"])
+                            elif path == "__unsubscribe__":
+                                socket.unsubscribe.send(request, socket, context, data["params"])
+                                events.on_unsubscribe(data["params"])
+                            #else:
+                            #    print data
+                        events.on_message.send(request, socket, context, data)
+                    else:
+                        events.on_message.send(request, socket, context, message)
             else:
-                if not socket.connected():
+                if socket.session.connected:
                     events.on_disconnect.send(request, socket, context)
                     break
     except Exception, exception:
