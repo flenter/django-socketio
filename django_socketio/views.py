@@ -44,20 +44,21 @@ def socketio(request):
     socket = SocketIOChannelProxy(request.environ["socketio"])
     CLIENTS[socket.session.session_id] = (request, socket, context)
     try:
-        if socket.on_connect():
-            events.on_connect.send(request, socket, context)
+        #if socket.on_connect():
+        #    events.on_connect.send(request, socket, context)
         while True:
-            message = socket.recv()
-            if len(message) > 0:
+            message = socket.receive()
+            if message and type(message) == dict:
                 if MESSAGE_LOG_FORMAT is not None:
                     socket.handler.server.log.write(format_log(request, message))
-                if message[0] == "__subscribe__" and len(message) == 2:
-                    socket.subscribe(message[1])
-                    events.on_subscribe.send(request, socket, context, message[1])
-                elif message[0] == "__unsubscribe__" and len(message) == 2:
-                    events.on_unsubscribe.send(request, socket, context, message[1])
-                    socket.unsubscribe(message[1])
-                else:
+
+#                if message[0] == "__subscribe__" and len(message) == 2:
+#                    socket.subscribe(message[1])
+#                    events.on_subscribe.send(request, socket, context, message[1])
+#                elif message[0] == "__unsubscribe__" and len(message) == 2:
+#                    events.on_unsubscribe.send(request, socket, context, message[1])
+#                    socket.unsubscribe(message[1])
+                if message['type'] == 'message':
                     events.on_message.send(request, socket, context, message)
             else:
                 if not socket.connected():

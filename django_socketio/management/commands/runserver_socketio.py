@@ -53,7 +53,7 @@ class Command(BaseCommand):
             print "SocketIOServer running on %s:%s" % bind
             print
             handler = self.get_handler(*args, **options)
-            server = SocketIOServer(bind, handler, resource="socket.io")
+            server = SocketIOServer(bind, handler, namespace="socket.io")
             server.serve_forever()
         except KeyboardInterrupt:
             if RELOAD:
